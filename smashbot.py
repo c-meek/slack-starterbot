@@ -97,4 +97,6 @@ if __name__ == "__main__":
                 handle_command(command, channel)
             time.sleep(READ_WEBSOCKET_DELAY)
     else:
+        print('bot: ' + BOT_ID)
+        print('challonge: ' + CHALLONGE_API_KEY)
         print("Connection failed. Invalid Slack token or bot ID?")
