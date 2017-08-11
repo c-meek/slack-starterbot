@@ -1,14 +1,21 @@
 import os
 import time
+import requests
 from slackclient import SlackClient
 
 
 # starterbot's ID as an environment variable
 BOT_ID = os.environ.get("BOT_ID")
 
+# Challonge
+CHALLONGE_KEY = os.environ.get("CHALLONGE_API_KEY")
+CHALLONGE_SUFFIX = '.json?api_key=' + CHALLONGE_KEY
+CHALLONGE_BASE_URL = 'https://api.challonge.com/v1/'
+
 # constants
 AT_BOT = "<@" + BOT_ID + ">"
-EXAMPLE_COMMAND = "do"
+LIST_TOURNAMENTS = "tournaments"
+LIST_MATCHES = "matches"
 
 # instantiate Slack & Twilio clients
 slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
@@ -20,12 +27,34 @@ def handle_command(command, channel):
         are valid commands. If so, then acts on the commands. If not,
         returns back what it needs for clarification.
     """
-    response = "Not sure what you mean. Use the *" + EXAMPLE_COMMAND + \
+    response = "Not sure what you mean. Use the *" + LIST_MATCHES + \
                "* command with numbers, delimited by spaces."
-    if command.startswith(EXAMPLE_COMMAND):
-        response = "Sure...write some more code then I can do that!"
+    if command.startswith(LIST_TOURNAMENTS):
+        response = list_tournaments()
+    elif command.startswith(LIST_MATCHES):
+        response = list_matches(command.split()[1])
     slack_client.api_call("chat.postMessage", channel=channel,
                           text=response, as_user=True)
+
+def list_tournaments():
+    response = '*Tournaments:*\n\n'
+    json = requests.get(CHALLONGE_BASE_URL + '/tournaments' + CHALLONGE_SUFFIX).json()
+    for entry in json:
+        tournament = entry['tournament']
+        response = response + tournament['name'] + ' (id: ' + str(tournament['id']) + ')\n'
+    return response
+
+def list_matches(tournament):
+    response = '*Open matches for tournament ' + tournament + ':*\n'
+    tournament_url = CHALLONGE_BASE_URL + '/tournaments/' + tournament
+    json = requests.get(tournament_url + '/matches' + CHALLONGE_SUFFIX).json()
+    for entry in json:
+        match = entry['match']
+        if match['state'] == 'open':
+            player_one_json = requests.get(tournament_url + '/participants/' + str(match['player1_id']) + CHALLONGE_SUFFIX).json()
+            player_two_json = requests.get(tournament_url + '/participants/' + str(match['player2_id']) + CHALLONGE_SUFFIX).json()
+            response = response + player_one_json['participant']['name'] + ' vs. ' + player_two_json['participant']['name'] + '\n'
+    return response
 
 
 def parse_slack_output(slack_rtm_output):
