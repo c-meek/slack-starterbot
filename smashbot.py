@@ -9,11 +9,11 @@ BOT_ID = os.environ.get("BOT_ID")
 
 # Challonge
 CHALLONGE_KEY = os.environ.get("CHALLONGE_API_KEY")
-CHALLONGE_SUFFIX = '.json?api_key=' + CHALLONGE_KEY
+CHALLONGE_SUFFIX = '.json?api_key=' + str(CHALLONGE_KEY)
 CHALLONGE_BASE_URL = 'https://api.challonge.com/v1/'
 
 # constants
-AT_BOT = "<@" + BOT_ID + ">"
+AT_BOT = "<@" + str(BOT_ID) + ">"
 LIST_TOURNAMENTS = "tournaments"
 LIST_MATCHES = "matches"
 
@@ -98,5 +98,5 @@ if __name__ == "__main__":
             time.sleep(READ_WEBSOCKET_DELAY)
     else:
         print('bot: ' + BOT_ID)
-        print('challonge: ' + CHALLONGE_API_KEY)
+        print('challonge: ' + CHALLONGE_KEY)
         print("Connection failed. Invalid Slack token or bot ID?")
