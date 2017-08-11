@@ -32,7 +32,10 @@ def handle_command(command, channel):
     if command.startswith(LIST_TOURNAMENTS):
         response = list_tournaments()
     elif command.startswith(LIST_MATCHES):
-        response = list_matches(command.split()[1])
+        if len(command.split()) == 1:
+            response = all_open_matches()
+        else:
+            response = list_matches(command.split()[1])
     slack_client.api_call("chat.postMessage", channel=channel,
                           text=response, as_user=True)
 
@@ -45,17 +48,28 @@ def list_tournaments():
     return response
 
 def list_matches(tournament):
-    response = '*Open matches for tournament ' + tournament + ':*\n'
     tournament_url = CHALLONGE_BASE_URL + '/tournaments/' + tournament
+    name = requests.get(tournament_url + CHALLONGE_SUFFIX).json()['tournament']['name']
+    response = '*Open matches for "' + name + '":*\n'
     json = requests.get(tournament_url + '/matches' + CHALLONGE_SUFFIX).json()
     for entry in json:
         match = entry['match']
         if match['state'] == 'open':
-            player_one_json = requests.get(tournament_url + '/participants/' + str(match['player1_id']) + CHALLONGE_SUFFIX).json()
-            player_two_json = requests.get(tournament_url + '/participants/' + str(match['player2_id']) + CHALLONGE_SUFFIX).json()
-            response = response + player_one_json['participant']['name'] + ' vs. ' + player_two_json['participant']['name'] + '\n'
+            response = response + parse_match(match, tournament)
     return response
 
+def all_open_matches():
+    tournaments_json = requests.get(CHALLONGE_BASE_URL + '/tournaments' + CHALLONGE_SUFFIX).json()
+    for tournament_entry in tournaments_json:
+        tournament = tournament_entry['tournament']
+        response = list_matches(str(tournament['id']))
+    return response
+
+def parse_match(match, tournament):
+    tournament_url = CHALLONGE_BASE_URL + '/tournaments/' + tournament
+    player_one_json = requests.get(tournament_url + '/participants/' + str(match['player1_id']) + CHALLONGE_SUFFIX).json()
+    player_two_json = requests.get(tournament_url + '/participants/' + str(match['player2_id']) + CHALLONGE_SUFFIX).json()
+    return player_one_json['participant']['name'] + ' vs. ' + player_two_json['participant']['name'] + '\n'
 
 def parse_slack_output(slack_rtm_output):
     """
